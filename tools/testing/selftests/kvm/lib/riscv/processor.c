@@ -272,9 +272,17 @@ void vcpu_arch_dump(FILE *stream, struct kvm_vcpu *vcpu, uint8_t indent)
 
 static void __aligned(16) guest_unexp_trap(void)
 {
-	sbi_ecall(KVM_RISCV_SELFTESTS_SBI_EXT,
-		  KVM_RISCV_SELFTESTS_SBI_UNEXP,
-		  0, 0, 0, 0, 0, 0);
+	uint64_t cause;
+
+	asm volatile ("csrr %0, scause" : "=r" (cause) : : );
+
+	if (cause == RISCV_GUEST_EXC_BREAKPOINT) {
+		GUEST_SYNC(RISCV_GUEST_EXC_BREAKPOINT);
+	} else {
+		sbi_ecall(KVM_RISCV_SELFTESTS_SBI_EXT,
+			  KVM_RISCV_SELFTESTS_SBI_UNEXP,
+			  0, 0, 0, 0, 0, 0);
+	}
 }
 
 struct kvm_vcpu *vm_arch_vcpu_add(struct kvm_vm *vm, uint32_t vcpu_id,
